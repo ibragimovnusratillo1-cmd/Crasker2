@@ -1,0 +1,216 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Admin User",
+      "username": "admin",
+      "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+      "role": "admin"
+    },
+    {
+      "id": 2,
+      "name": "Dr. John Smith",
+      "username": "dr.smith",
+      "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+      "role": "clinician"
+    },
+    {
+      "id": 3,
+      "name": "Dr. Sara Jones",
+      "username": "dr.jones",
+      "password": "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi",
+      "role": "clinician"
+    }
+  ],
+  "doctors": [
+    {
+      "id": 1,
+      "firstName": "James",
+      "lastName": "Wilson",
+      "specialization": "Cardiology",
+      "department": "Cardiology",
+      "email": "j.wilson@caretrack.com",
+      "phone": "+1-555-0101",
+      "status": "Active"
+    },
+    {
+      "id": 2,
+      "firstName": "Sara",
+      "lastName": "Connor",
+      "specialization": "Neurology",
+      "department": "Neurology",
+      "email": "s.connor@caretrack.com",
+      "phone": "+1-555-0102",
+      "status": "Active"
+    },
+    {
+      "id": 3,
+      "firstName": "Michael",
+      "lastName": "Brown",
+      "specialization": "Dermatology",
+      "department": "Dermatology",
+      "email": "m.brown@caretrack.com",
+      "phone": "+1-555-0103",
+      "status": "Active"
+    },
+    {
+      "id": 4,
+      "firstName": "Aisha",
+      "lastName": "Karimova",
+      "specialization": "Orthopedics",
+      "department": "Orthopedics",
+      "email": "a.karim@caretrack.com",
+      "phone": "+1-555-0104",
+      "status": "Active"
+    },
+    {
+      "id": 5,
+      "firstName": "Robert",
+      "lastName": "Taylor",
+      "specialization": "General Practice",
+      "department": "General",
+      "email": "r.taylor@caretrack.com",
+      "phone": "+1-555-0105",
+      "status": "Active"
+    }
+  ],
+  "patients": [
+    {
+      "id": 1,
+      "firstName": "Emily",
+      "lastName": "Johnson",
+      "dob": "1990-04-15",
+      "gender": "Female",
+      "email": "e.johnson@mail.com",
+      "phone": "+1-555-1001",
+      "address": "123 Oak St",
+      "bloodType": "A+",
+      "doctorId": 1
+    },
+    {
+      "id": 2,
+      "firstName": "Mark",
+      "lastName": "Davis",
+      "dob": "1978-09-22",
+      "gender": "Male",
+      "email": "m.davis@mail.com",
+      "phone": "+1-555-1002",
+      "address": "45 Pine Ave",
+      "bloodType": "O-",
+      "doctorId": 2
+    },
+    {
+      "id": 3,
+      "firstName": "Sophie",
+      "lastName": "Wang",
+      "dob": "2001-01-08",
+      "gender": "Female",
+      "email": "s.wang@mail.com",
+      "phone": "+1-555-1003",
+      "address": "78 Elm Rd",
+      "bloodType": "B+",
+      "doctorId": 1
+    },
+    {
+      "id": 4,
+      "firstName": "Carlos",
+      "lastName": "Martinez",
+      "dob": "1965-11-30",
+      "gender": "Male",
+      "email": "c.mart@mail.com",
+      "phone": "+1-555-1004",
+      "address": "9 Cedar Ln",
+      "bloodType": "AB+",
+      "doctorId": 3
+    },
+    {
+      "id": 5,
+      "firstName": "Lena",
+      "lastName": "Petrov",
+      "dob": "1988-07-19",
+      "gender": "Female",
+      "email": "l.petrov@mail.com",
+      "phone": "+1-555-1005",
+      "address": "22 Maple Dr",
+      "bloodType": "O+",
+      "doctorId": 4
+    },
+    {
+      "id": 6,
+      "firstName": "Tom",
+      "lastName": "Harris",
+      "dob": "1995-03-03",
+      "gender": "Male",
+      "email": "t.harris@mail.com",
+      "phone": "+1-555-1006",
+      "address": "5 Birch Blvd",
+      "bloodType": "A-",
+      "doctorId": 5
+    }
+  ],
+  "diagnoses": [
+    {
+      "id": 1,
+      "patientId": 1,
+      "icdCode": "I21.9",
+      "description": "Acute Myocardial Infarction",
+      "severity": "Critical",
+      "date": "2025-11-10",
+      "notes": "Patient stabilized, follow-up in 2 weeks."
+    },
+    {
+      "id": 2,
+      "patientId": 1,
+      "icdCode": "I10",
+      "description": "Essential Hypertension",
+      "severity": "Moderate",
+      "date": "2025-10-01",
+      "notes": "Prescribed antihypertensives."
+    },
+    {
+      "id": 3,
+      "patientId": 2,
+      "icdCode": "G43.9",
+      "description": "Migraine",
+      "severity": "Moderate",
+      "date": "2025-12-05",
+      "notes": "Recurring episodes, MRI ordered."
+    },
+    {
+      "id": 5,
+      "patientId": 4,
+      "icdCode": "L20.9",
+      "description": "Atopic Dermatitis",
+      "severity": "Mild",
+      "date": "2025-11-28",
+      "notes": "Topical corticosteroids prescribed."
+    },
+    {
+      "id": 6,
+      "patientId": 5,
+      "icdCode": "M16.1",
+      "description": "Primary Osteoarthritis of Hip",
+      "severity": "Moderate",
+      "date": "2025-09-15",
+      "notes": "Physiotherapy recommended."
+    },
+    {
+      "id": 7,
+      "patientId": 6,
+      "icdCode": "K21.0",
+      "description": "Gastroesophageal Reflux Disease",
+      "severity": "Mild",
+      "date": "2025-12-01",
+      "notes": "Dietary changes advised."
+    },
+    {
+      "id": 8,
+      "patientId": 2,
+      "icdCode": "G47.0",
+      "description": "Insomnia",
+      "severity": "Mild",
+      "date": "2025-12-10",
+      "notes": "Sleep hygiene counselling."
+    }
+  ]
+}

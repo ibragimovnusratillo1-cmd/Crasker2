@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>CareTrack MRMS — Login</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <link rel="stylesheet" href="/css/login.css"/>
+</head>
+<body class="login-body">
+
+<div class="login-card-wrap">
+  <!-- Left panel -->
+  <div class="login-left">
+    <div class="ll-icon">🏥</div>
+    <h1 class="ll-title">CareTrack<br><span>MRMS</span></h1>
+    <p class="ll-sub">Medical Records Management System for CareTrack Clinic — secure, fast, and role-based.</p>
+    <ul class="feature-list">
+      <li><span class="fi">👨‍⚕️</span> Doctor Profile Management</li>
+      <li><span class="fi">🧑‍🤝‍🧑</span> Patient Records & Profiles</li>
+      <li><span class="fi">🩺</span> Diagnosis & ICD Code Tracking</li>
+      <li><span class="fi">🔐</span> Role-Based Access Control</li>
+      <li><span class="fi">🔍</span> Search & Filter All Records</li>
+    </ul>
+  </div>
+
+  <!-- Right panel -->
+  <div class="login-right">
+    <div class="login-form">
+      <div class="lf-title">Welcome back</div>
+      <div class="lf-sub">Sign in to access your dashboard</div>
+
+      <div id="err-box" class="alert-box hidden"></div>
+
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-control" type="text" id="username" placeholder="e.g. admin" autocomplete="username"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input class="form-control" type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+      </div>
+
+      <button class="btn btn-primary btn-full btn-lg" id="login-btn" onclick="doLogin()">
+        Sign In →
+      </button>
+
+      <div class="demo-section">
+        <div class="demo-title">Demo accounts</div>
+        <div class="demo-btns">
+          <button class="demo-btn" onclick="fill('admin','admin123')">
+            <strong>🔑 Admin</strong>
+            <span>admin / admin123</span>
+          </button>
+          <button class="demo-btn" onclick="fill('dr.smith','clinic123')">
+            <strong>🩺 Clinician</strong>
+            <span>dr.smith / clinic123</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+  // Already logged in?
+  if (Auth.current()) location.href = '/pages/dashboard.html';
+
+  function fill(u, p) {
+    document.getElementById('username').value = u;
+    document.getElementById('password').value = p;
+  }
+
+  async function doLogin() {
+    const btn  = document.getElementById('login-btn');
+    const err  = document.getElementById('err-box');
+    const u    = document.getElementById('username').value.trim();
+    const pw   = document.getElementById('password').value.trim();
+
+    if (!u || !pw) {
+      err.textContent = 'Please enter username and password.';
+      err.classList.remove('hidden'); return;
+    }
+
+    btn.textContent = 'Signing in…'; btn.disabled = true;
+    err.classList.add('hidden');
+
+    try {
+      const data = await API.post('/auth/login', { username: u, password: pw });
+      Auth.login(data.token, data.user);
+      location.href = '/pages/dashboard.html';
+    } catch(e) {
+      err.textContent = e.message || 'Invalid username or password.';
+      err.classList.remove('hidden');
+      btn.textContent = 'Sign In →'; btn.disabled = false;
+    }
+  }
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Patient Profile — CareTrack MRMS</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <a class="btn btn-ghost btn-sm" href="/pages/patients.html">← Patients</a>
+        <div class="topbar-title" id="page-title">Patient Profile</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="openAddDiag()">+ Add Diagnosis</button>
+      </div>
+    </header>
+    <main class="page-content" id="content">
+      <div class="text-center text-muted" style="padding:60px">Loading...</div>
+    </main>
+  </div>
+</div>
+
+<!-- Diagnosis Modal -->
+<div class="modal-overlay hidden" id="diag-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="diag-title">Add Diagnosis</span>
+      <button class="modal-close" onclick="closeModal('diag-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="diag-form" onsubmit="return false">
+        <input type="hidden" name="id"/>
+        <input type="hidden" name="patientId"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ICD Code <span>*</span></label>
+            <input class="form-control" name="icdCode" required placeholder="e.g. I21.9"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date <span>*</span></label>
+            <input class="form-control" name="date" type="date" required/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description <span>*</span></label>
+          <input class="form-control" name="description" required placeholder="Diagnosis description"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severity</label>
+          <select class="form-control" name="severity">
+            <option>Mild</option><option>Moderate</option>
+            <option>Severe</option><option>Critical</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" name="notes" placeholder="Clinical notes..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('diag-modal')">Cancel</button>
+      <button class="btn btn-teal" onclick="saveDiag()">💾 Save Diagnosis</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+const user = Auth.require();
+const pid  = +new URLSearchParams(location.search).get('id');
+let patient;
+
+if (user) {
+  renderSidebar('patients');
+  loadProfile();
+}
+
+async function loadProfile() {
+  try {
+    patient = await API.get(`/patients/${pid}`);
+    render();
+  } catch {
+    document.getElementById('content').innerHTML =
+      `<div class="empty-state"><div class="empty-ico">⚠️</div><p>Patient not found.</p></div>`;
+  }
+}
+
+function render() {
+  const p    = patient;
+  const doc  = p.doctor;
+  const diags= p.diagnoses;
+  const init = `${p.firstName[0]}${p.lastName[0]}`.toUpperCase();
+  const isAdmin = Auth.isAdmin();
+
+  document.getElementById('page-title').textContent = `${p.firstName} ${p.lastName}`;
+  document.querySelector('#diag-form [name="patientId"]').value = pid;
+
+  document.getElementById('content').innerHTML = `
+    <!-- Profile banner -->
+    <div class="card mb-16" style="overflow:hidden">
+      <div class="profile-banner">
+        <div class="profile-avatar-xl">${init}</div>
+        <div style="flex:1">
+          <div class="profile-name">${p.firstName} ${p.lastName}</div>
+          <div class="profile-meta">
+            ${calcAge(p.dob)} • ${p.gender||'—'} • Blood: <strong>${p.bloodType||'—'}</strong>
+          </div>
+        </div>
+        ${isAdmin ? `
+        <div class="flex gap-8">
+          <button class="btn btn-ghost btn-sm" style="color:#fff;border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.12)"
+            onclick="delPatient()">🗑 Delete</button>
+        </div>` : ''}
+      </div>
+      <div class="detail-grid">
+        <div class="detail-item"><div class="detail-label">Date of Birth</div><div class="detail-value">${p.dob||'—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Email</div><div class="detail-value">${p.email||'—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Phone</div><div class="detail-value">${p.phone||'—'}</div></div>
+        <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">${p.address||'—'}</div></div>
+        <div class="detail-item" style="grid-column:span 2">
+          <div class="detail-label">Assigned Doctor</div>
+          <div class="detail-value">
+            ${doc
+              ? `<span style="color:var(--primary);font-weight:700">Dr. ${doc.firstName} ${doc.lastName}</span>
+                 <span class="text-muted" style="margin-left:8px">${doc.specialization} — ${doc.department}</span>`
+              : '— Unassigned'}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diagnoses -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🩺 Diagnosis Records</span>
+        <span class="text-muted">${diags.length} record(s)</span>
+      </div>
+      ${diags.length ? `
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>ICD Code</th><th>Description</th><th>Severity</th><th>Notes</th><th>Actions</th></tr></thead>
+          <tbody>
+            ${diags.map(d => `
+            <tr>
+              <td style="white-space:nowrap">${d.date||'—'}</td>
+              <td><code>${d.icdCode}</code></td>
+              <td>${d.description}</td>
+              <td>${severityBadge(d.severity)}</td>
+              <td style="font-size:12px;color:var(--gray-500);max-width:180px">${d.notes||'—'}</td>
+              <td>
+                <div class="flex gap-8">
+                  <button class="btn btn-ghost btn-sm" onclick="openEditDiag(${d.id})">✏️</button>
+                  <button class="btn btn-danger btn-sm" onclick="delDiag(${d.id})">🗑</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : `
+      <div class="empty-state">
+        <div class="empty-ico">🩺</div>
+        <p>No diagnoses recorded yet. <a class="link" href="#" onclick="openAddDiag()">Add one.</a></p>
+      </div>`}
+    </div>`;
+}
+
+function openAddDiag() {
+  document.getElementById('diag-title').textContent = 'Add Diagnosis';
+  resetForm('diag-form');
+  document.querySelector('#diag-form [name="patientId"]').value = pid;
+  document.querySelector('#diag-form [name="date"]').value = new Date().toISOString().split('T')[0];
+  openModal('diag-modal');
+}
+function openEditDiag(id) {
+  const d = patient.diagnoses.find(x => x.id === id);
+  document.getElementById('diag-title').textContent = 'Edit Diagnosis';
+  fillForm('diag-form', d);
+  openModal('diag-modal');
+}
+async function saveDiag() {
+  const data = collectForm('diag-form');
+  if (!data.icdCode || !data.description || !data.date) {
+    showToast('ICD code, description and date required.', 'danger'); return;
+  }
+  data.patientId = +data.patientId;
+  try {
+    if (data.id) { await API.put(`/diagnoses/${data.id}`, data); showToast('Diagnosis updated!'); }
+    else         { await API.post('/diagnoses', data);            showToast('Diagnosis added!'); }
+    closeModal('diag-modal'); await loadProfile();
+  } catch(e) { showToast(e.message, 'danger'); }
+}
+async function delDiag(id) {
+  confirmDelete('Delete this diagnosis?', async () => {
+    try { await API.delete(`/diagnoses/${id}`); showToast('Deleted.', 'danger'); await loadProfile(); }
+    catch(e) { showToast(e.message, 'danger'); }
+  });
+}
+async function delPatient() {
+  confirmDelete(`Delete ${patient.firstName} ${patient.lastName} and all their diagnoses?`, async () => {
+    try { await API.delete(`/patients/${pid}`); showToast('Patient deleted.', 'danger'); location.href='/pages/patients.html'; }
+    catch(e) { showToast(e.message, 'danger'); }
+  });
+}
+</script>
+</body>
+</html>

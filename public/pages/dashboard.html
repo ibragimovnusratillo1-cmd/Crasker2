@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard — CareTrack MRMS</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title">📊 Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <span id="date-label" class="text-muted"></span>
+      </div>
+    </header>
+    <main class="page-content">
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats"></div>
+
+      <!-- Two columns -->
+      <div class="grid-2 mb-24" id="grid-cols">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🧑‍🤝‍🧑 Recent Patients</span>
+            <a class="btn btn-ghost btn-sm" href="/pages/patients.html">View all →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Name</th><th>Doctor</th><th>Blood</th></tr></thead>
+              <tbody id="recent-patients"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">🩺 Recent Diagnoses</span>
+            <a class="btn btn-ghost btn-sm" href="/pages/diagnoses.html">View all →</a>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Patient</th><th>ICD</th><th>Severity</th></tr></thead>
+              <tbody id="recent-diags"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Doctors overview — admin only -->
+      <div class="card hidden" id="doctors-card">
+        <div class="card-header">
+          <span class="card-title">👨‍⚕️ Doctors Overview</span>
+          <a class="btn btn-ghost btn-sm" href="/pages/doctors.html">Manage →</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Name</th><th>Specialization</th><th>Department</th><th>Patients</th><th>Status</th></tr></thead>
+            <tbody id="doctors-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+const user = Auth.require();
+if (user) {
+  renderSidebar('dashboard');
+  document.getElementById('date-label').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  const d = await API.get('/stats');
+
+  // Stats
+  const statDefs = [
+    { label:'Total Doctors',   num:d.doctors,   icon:'👨‍⚕️', cls:'si-blue',    href:'/pages/doctors.html' },
+    { label:'Total Patients',  num:d.patients,  icon:'🧑‍🤝‍🧑', cls:'si-teal',    href:'/pages/patients.html' },
+    { label:'Diagnoses',       num:d.diagnoses, icon:'🩺',  cls:'si-emerald',  href:'/pages/diagnoses.html' },
+    { label:'Critical Cases',  num:d.critical,  icon:'🚨',  cls:'si-rose',     href:'/pages/diagnoses.html?severity=Critical' },
+  ];
+  document.getElementById('stats').innerHTML = statDefs.map(s =>
+    `<a class="stat-card" href="${s.href}">
+      <div class="stat-icon-wrap ${s.cls}">${s.icon}</div>
+      <div class="stat-info">
+        <div class="stat-num">${s.num}</div>
+        <div class="stat-label">${s.label}</div>
+      </div>
+    </a>`
+  ).join('');
+
+  // Recent patients
+  document.getElementById('recent-patients').innerHTML = d.recentPatients.length
+    ? d.recentPatients.map(p => `
+        <tr>
+          <td><a class="link" href="/pages/patient-profile.html?id=${p.id}">${p.firstName} ${p.lastName}</a></td>
+          <td class="text-muted" style="font-size:12px">—</td>
+          <td><span class="badge badge-gray">${p.bloodType||'—'}</span></td>
+        </tr>`).join('')
+    : '<tr><td colspan="3" class="text-center text-muted" style="padding:20px">No patients yet</td></tr>';
+
+  // Recent diagnoses
+  document.getElementById('recent-diags').innerHTML = d.recentDiagnoses.length
+    ? d.recentDiagnoses.map(diag => `
+        <tr>
+          <td>${diag.patientName}</td>
+          <td><code>${diag.icdCode}</code></td>
+          <td>${severityBadge(diag.severity)}</td>
+        </tr>`).join('')
+    : '<tr><td colspan="3" class="text-center text-muted" style="padding:20px">No diagnoses yet</td></tr>';
+
+  // Doctors overview (admin only)
+  if (Auth.isAdmin()) {
+    document.getElementById('doctors-card').classList.remove('hidden');
+    document.getElementById('doctors-tbody').innerHTML = d.doctorsOverview.map((doc, i) => `
+      <tr>
+        <td class="text-muted">${i+1}</td>
+        <td class="fw-bold">Dr. ${doc.firstName} ${doc.lastName}</td>
+        <td>${doc.specialization}</td>
+        <td><span class="badge badge-blue">${doc.department}</span></td>
+        <td><span class="badge badge-teal">${doc.patientCount} pts</span></td>
+        <td><span class="badge badge-${doc.status==='Active'?'emerald':'gray'}">${doc.status}</span></td>
+      </tr>`).join('');
+  }
+}
+</script>
+</body>
+</html>

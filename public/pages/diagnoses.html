@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Diagnoses — CareTrack MRMS</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title">🩺 Diagnoses</div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="openAdd()">+ Add Diagnosis</button>
+      </div>
+    </header>
+    <main class="page-content">
+
+      <div class="card mb-16">
+        <div class="card-body" style="padding:14px 20px">
+          <div class="search-bar">
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="q" placeholder="Search ICD code, description, patient..." oninput="renderTable()"/>
+            </div>
+            <select class="filter-select" id="f-severity" onchange="renderTable()">
+              <option value="">All Severities</option>
+              <option>Mild</option><option>Moderate</option><option>Severe</option><option>Critical</option>
+            </select>
+            <select class="filter-select" id="f-patient" onchange="renderTable()">
+              <option value="">All Patients</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">All Diagnosis Records</span>
+          <span id="count" class="text-muted"></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>#</th><th>Date</th><th>Patient</th><th>ICD Code</th><th>Description</th><th>Severity</th><th>Notes</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div id="empty" class="empty-state hidden">
+          <div class="empty-ico">🩺</div><p>No diagnoses found.</p>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Add Diagnosis</span>
+      <button class="modal-close" onclick="closeModal('modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form" onsubmit="return false">
+        <input type="hidden" name="id"/>
+        <div class="form-group">
+          <label class="form-label">Patient <span>*</span></label>
+          <select class="form-control" name="patientId" id="patient-select" required>
+            <option value="">Select patient...</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">ICD Code <span>*</span></label>
+            <input class="form-control" name="icdCode" required placeholder="e.g. I21.9"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date <span>*</span></label>
+            <input class="form-control" name="date" type="date" required/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description <span>*</span></label>
+          <input class="form-control" name="description" required placeholder="Diagnosis description"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severity</label>
+          <select class="form-control" name="severity">
+            <option>Mild</option><option>Moderate</option><option>Severe</option><option>Critical</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" name="notes" placeholder="Clinical notes..."></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal')">Cancel</button>
+      <button class="btn btn-teal" onclick="save()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+let diagList = [], patients = [];
+const user = Auth.require();
+if (user) {
+  renderSidebar('diagnoses');
+  // Pre-filter from URL
+  const params = new URLSearchParams(location.search);
+  if (params.get('severity')) document.getElementById('f-severity').value = params.get('severity');
+  load();
+}
+
+async function load() {
+  [diagList, patients] = await Promise.all([API.get('/diagnoses'), API.get('/patients')]);
+  const fSel = document.getElementById('f-patient');
+  const pSel = document.getElementById('patient-select');
+  fSel.innerHTML = '<option value="">All Patients</option>';
+  pSel.innerHTML = '<option value="">Select patient...</option>';
+  patients.forEach(p => {
+    const label = `${p.firstName} ${p.lastName}`;
+    fSel.appendChild(new Option(label, p.id));
+    pSel.appendChild(new Option(label, p.id));
+  });
+  renderTable();
+}
+
+function renderTable() {
+  const q        = document.getElementById('q').value.toLowerCase();
+  const severity = document.getElementById('f-severity').value;
+  const patId    = document.getElementById('f-patient').value;
+
+  let list = diagList;
+  if (q)        list = list.filter(d => `${d.icdCode} ${d.description} ${d.patientName}`.toLowerCase().includes(q));
+  if (severity) list = list.filter(d => d.severity === severity);
+  if (patId)    list = list.filter(d => String(d.patientId) === patId);
+
+  document.getElementById('count').textContent = `${list.length} record(s)`;
+  const empty = document.getElementById('empty');
+  const tbody = document.getElementById('tbody');
+  if (!list.length) { tbody.innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = list.map((d, i) => `
+    <tr>
+      <td class="text-muted">${i+1}</td>
+      <td style="white-space:nowrap">${d.date||'—'}</td>
+      <td>
+        <a class="link fw-bold" href="/pages/patient-profile.html?id=${d.patientId}">
+          ${d.patientName}
+        </a>
+      </td>
+      <td><code>${d.icdCode}</code></td>
+      <td>${d.description}</td>
+      <td>${severityBadge(d.severity)}</td>
+      <td style="font-size:12px;color:var(--gray-500);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.notes||'—'}</td>
+      <td>
+        <div class="flex gap-8">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit(${d.id})">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="del(${d.id})">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openAdd() {
+  document.getElementById('modal-title').textContent = 'Add Diagnosis';
+  resetForm('form');
+  document.querySelector('#form [name="date"]').value = new Date().toISOString().split('T')[0];
+  openModal('modal');
+}
+function openEdit(id) {
+  const d = diagList.find(x => x.id === id);
+  document.getElementById('modal-title').textContent = 'Edit Diagnosis';
+  fillForm('form', { ...d, patientId: d.patientId || '' });
+  openModal('modal');
+}
+async function save() {
+  const data = collectForm('form');
+  if (!data.patientId || !data.icdCode || !data.description || !data.date) {
+    showToast('Patient, ICD code, description and date required.', 'danger'); return;
+  }
+  data.patientId = +data.patientId;
+  try {
+    if (data.id) { await API.put(`/diagnoses/${data.id}`, data); showToast('Diagnosis updated!'); }
+    else         { await API.post('/diagnoses', data);            showToast('Diagnosis added!'); }
+    closeModal('modal'); await load();
+  } catch(e) { showToast(e.message, 'danger'); }
+}
+async function del(id) {
+  confirmDelete('Delete this diagnosis?', async () => {
+    try { await API.delete(`/diagnoses/${id}`); showToast('Deleted.', 'danger'); await load(); }
+    catch(e) { showToast(e.message, 'danger'); }
+  });
+}
+</script>
+</body>
+</html>

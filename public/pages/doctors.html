@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Doctors — CareTrack MRMS</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-title">👨‍⚕️ Doctors</div>
+      </div>
+      <div class="topbar-right" id="topbar-actions"></div>
+    </header>
+    <main class="page-content">
+
+      <!-- Access denied -->
+      <div id="access-denied" class="access-denied hidden">
+        <div class="lock-ico">🔒</div>
+        <h3>Access Restricted</h3>
+        <p>Only Administrators can manage doctor records.</p>
+      </div>
+
+      <div id="main-wrap">
+        <!-- Search -->
+        <div class="card mb-16">
+          <div class="card-body" style="padding:14px 20px">
+            <div class="search-bar">
+              <div class="search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="q" placeholder="Search name, specialization..." oninput="renderTable()"/>
+              </div>
+              <select class="filter-select" id="f-dept" onchange="renderTable()">
+                <option value="">All Departments</option>
+              </select>
+              <select class="filter-select" id="f-status" onchange="renderTable()">
+                <option value="">All Statuses</option>
+                <option>Active</option><option>Inactive</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">All Doctors</span>
+            <span id="count" class="text-muted"></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>#</th><th>Name</th><th>Specialization</th><th>Department</th><th>Email</th><th>Phone</th><th>Patients</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div id="empty" class="empty-state hidden">
+            <div class="empty-ico">👨‍⚕️</div>
+            <p>No doctors found.</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay hidden" id="modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Add Doctor</span>
+      <button class="modal-close" onclick="closeModal('modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="form" onsubmit="return false">
+        <input type="hidden" name="id"/>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">First Name <span>*</span></label>
+            <input class="form-control" name="firstName" placeholder="John" required/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name <span>*</span></label>
+            <input class="form-control" name="lastName" placeholder="Smith" required/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Specialization <span>*</span></label>
+            <select class="form-control" name="specialization" required>
+              <option value="">Select...</option>
+              <option>General Practice</option><option>Cardiology</option>
+              <option>Neurology</option><option>Dermatology</option>
+              <option>Orthopedics</option><option>Pediatrics</option>
+              <option>Oncology</option><option>Radiology</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Department <span>*</span></label>
+            <select class="form-control" name="department" required>
+              <option value="">Select...</option>
+              <option>General</option><option>Cardiology</option>
+              <option>Neurology</option><option>Dermatology</option>
+              <option>Orthopedics</option><option>Pediatrics</option>
+              <option>Oncology</option><option>Radiology</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input class="form-control" name="email" type="email" placeholder="doctor@caretrack.com"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone</label>
+            <input class="form-control" name="phone" placeholder="+1-555-0000"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-control" name="status">
+            <option>Active</option><option>Inactive</option>
+          </select>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="save()">💾 Save Doctor</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/shared.js"></script>
+<script>
+let doctors = [];
+const user = Auth.require();
+if (user) {
+  renderSidebar('doctors');
+  if (user.role !== 'admin') {
+    document.getElementById('access-denied').classList.remove('hidden');
+    document.getElementById('main-wrap').classList.add('hidden');
+  } else {
+    document.getElementById('topbar-actions').innerHTML =
+      `<button class="btn btn-primary" onclick="openAdd()">+ Add Doctor</button>`;
+    load();
+  }
+}
+
+async function load() {
+  doctors = await API.get('/doctors');
+  // Populate dept filter
+  const depts = [...new Set(doctors.map(d => d.department))].sort();
+  const sel = document.getElementById('f-dept');
+  depts.forEach(d => sel.appendChild(new Option(d, d)));
+  renderTable();
+}
+
+function renderTable() {
+  const q      = document.getElementById('q').value.toLowerCase();
+  const dept   = document.getElementById('f-dept').value;
+  const status = document.getElementById('f-status').value;
+
+  let list = doctors;
+  if (q)      list = list.filter(d => `${d.firstName} ${d.lastName} ${d.specialization} ${d.email}`.toLowerCase().includes(q));
+  if (dept)   list = list.filter(d => d.department === dept);
+  if (status) list = list.filter(d => d.status === status);
+
+  document.getElementById('count').textContent = `${list.length} record(s)`;
+  const empty = document.getElementById('empty');
+  const tbody = document.getElementById('tbody');
+
+  if (!list.length) { tbody.innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = list.map((d, i) => `
+    <tr>
+      <td class="text-muted">${i+1}</td>
+      <td class="fw-bold">Dr. ${d.firstName} ${d.lastName}</td>
+      <td>${d.specialization}</td>
+      <td><span class="badge badge-blue">${d.department}</span></td>
+      <td style="font-size:12px">${d.email||'—'}</td>
+      <td style="font-size:12px">${d.phone||'—'}</td>
+      <td><span class="badge badge-teal">${d.patientCount||0} pts</span></td>
+      <td><span class="badge badge-${d.status==='Active'?'emerald':'gray'}">${d.status}</span></td>
+      <td>
+        <div class="flex gap-8">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit(${d.id})">✏️ Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="del(${d.id})">🗑</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function openAdd() {
+  document.getElementById('modal-title').textContent = 'Add Doctor';
+  resetForm('form');
+  openModal('modal');
+}
+function openEdit(id) {
+  const d = doctors.find(x => x.id === id);
+  document.getElementById('modal-title').textContent = 'Edit Doctor';
+  fillForm('form', d);
+  openModal('modal');
+}
+async function save() {
+  const data = collectForm('form');
+  if (!data.firstName || !data.lastName || !data.specialization || !data.department) {
+    showToast('Please fill required fields.', 'danger'); return;
+  }
+  try {
+    if (data.id) { await API.put(`/doctors/${data.id}`, data); showToast('Doctor updated!'); }
+    else         { await API.post('/doctors', data);           showToast('Doctor added!'); }
+    closeModal('modal'); await load();
+  } catch(e) { showToast(e.message, 'danger'); }
+}
+async function del(id) {
+  const d = doctors.find(x => x.id === id);
+  confirmDelete(`Delete Dr. ${d.firstName} ${d.lastName}?`, async () => {
+    try { await API.delete(`/doctors/${id}`); showToast('Doctor deleted.', 'danger'); await load(); }
+    catch(e) { showToast(e.message, 'danger'); }
+  });
+}
+</script>
+</body>
+</html>
